@@ -41,12 +41,15 @@
   .btn-ghost:hover{background:#fff}
   .btn:focus-visible,.thumb:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
 
-  .thumbs{display:flex;gap:10px;overflow-x:auto;padding:16px 2px 6px;scroll-snap-type:x mandatory}
-  .thumb{flex:0 0 auto;width:70px;aspect-ratio:1587/2245;border-radius:6px;overflow:hidden;border:2px solid transparent;padding:0;background:#fff;cursor:pointer;opacity:.55;scroll-snap-align:center;transition:opacity .2s,border-color .2s}
-  .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-  .thumb:hover{opacity:.85}
-  .thumb[aria-current="true"]{opacity:1;border-color:var(--lime)}
-
+  .thumbs{display:flex;gap:10px;overflow-x:auto;padding:16px 2px 8px;scroll-snap-type:x mandatory}
+  .thumb{flex:0 0 auto;width:96px;border:0;padding:0;background:transparent;cursor:pointer;opacity:.6;scroll-snap-align:center;transition:opacity .2s;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit}
+  .tframe{display:block;width:70px;aspect-ratio:1587/2245;border-radius:6px;overflow:hidden;border:2px solid transparent;background:#fff;transition:border-color .2s}
+  .tframe img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+  .tlabel{font-size:12px;line-height:1.25;color:var(--slate-dark);text-align:center}
+  .thumb:hover{opacity:.9}
+  .thumb[aria-current="true"]{opacity:1}
+  .thumb[aria-current="true"] .tframe{border-color:var(--lime)}
+  .thumb[aria-current="true"] .tlabel{font-weight:500;color:var(--olive)}
   .ask{margin-top:18px;display:flex;align-items:center;gap:14px;background:var(--slate);color:#fff;border-radius:14px;padding:16px 20px}
   .ask .q{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:26px;line-height:1.1;margin:0}
   .ask .q span{color:var(--lime)}
@@ -82,7 +85,7 @@
       <span class="zoom-hint">Click to enlarge</span>
     </div>
     <div class="info" aria-live="polite">
-      <div class="count"><b id="num">01</b> / <span id="total">12</span></div>
+      <div class="count"><b id="num">01</b> / <span id="total">10</span> · <span id="theme"></span></div>
       <h2 id="title"></h2>
       <p class="hook" id="hook"></p>
       <ul class="chips" id="chips"></ul>
@@ -111,42 +114,36 @@
 
 <script>
 const CHALLENGES = [
-  {img:"753f75b7", title:"Digital Anatomy",
-   hook:"What is inside the devices we throw away? Students take apart discarded electronics, map their components and test what still works.",
-   tags:["Technology","Physics","Chemistry","Citizenship"]},
-  {img:"fe23f82d", title:"Can AI help us make better decisions?",
-   hook:"Plants in the school greenhouse are wilting. Students build a Yes/No decision tree, then use generative AI to critique it.",
-   tags:["Biology","Mathematics","Engineering","Technology"]},
-  {img:"4eb5d9f7", title:"How to clean up an oil spill?",
-   hook:"Sponges, cloth, soap or strainers? Students test clean-up methods and model how fast the slick reaches the coast.",
-   tags:["Physics","Chemistry","Biology","Mathematics"]},
-  {img:"5a4f7924", title:"Fact or fiction: how to debunk climate fake news?",
-   hook:"Students use AI to craft a fake news story about renewables, then turn into fact-checkers and debunk it with real data.",
-   tags:["Physics","Language","Geography","Civic education"]},
-  {img:"f31975e1", title:"Are honeybees such great mathematicians?",
-   hook:"Why are honeycomb cells hexagonal? Soap bubbles and soft clay show that physics, not calculation, does the work.",
-   tags:["Mathematics","Physics","Biology","Engineering"]},
-  {img:"bcb0d489", title:"How to improve climate justice?",
-   hook:"A role-play walk: each student becomes a character and steps forward or back as climate scenarios unfold.",
-   tags:["Geography","Biology","Ethics","Politics"]},
-  {img:"83a97ca6", title:"Should measles vaccinations be mandatory?",
+  {img:"digital-colour", theme:"Digital colour", title:"How can we agree on the exact same digital colour?",
+   hook:"How do screens mix red, green and blue light, and why do designers describe colours with hexadecimal codes?",
+   tags:["Visual arts","Computer science","Biology","Mathematics"]},
+  {img:"electing-parliament", theme:"Electing parliament", title:"Which is the best way to elect parliament?",
+   hook:"Students compare electoral systems across Europe and build toy election results to test what makes a system fair.",
+   tags:["Politics","History","Mathematics"]},
+  {img:"measles-vaccination", theme:"Measles vaccination", title:"Should measles vaccinations be mandatory?",
    hook:"An expert discussion where small groups research one perspective, then look for nuanced solutions together.",
    tags:["Biology","Sociology","Law","Ethics"]},
-  {img:"250cede3", title:"How to collect old phones?",
-   hook:"How many phones are lying in drawers? Students size up the problem and design a collection campaign.",
-   tags:["Mathematics","Geography","Visual arts","Ethics"]},
-  {img:"6b97956b", title:"What is the best way to vote in school?",
-   hook:"Choosing a class trip opens the door to voting systems, fairness and a Nobel-winning theorem about perfect votes.",
-   tags:["Mathematics","Politics","History","Ethics"]},
-  {img:"12330e09", title:"Can you create and analyse music without any preknowledge?",
-   hook:"A spectrogram turns sound into images, so students can explore the physics of sound and improvise music.",
-   tags:["Music","Physics","Technology"]},
-  {img:"24dc73c7", title:"What do cochlear and retinal implants mean to deaf and blind people?",
-   hook:"How well do implants replace hearing or sight, and how does the deaf community see them?",
-   tags:["Biology","Technology","Law","Sociology"]},
-  {img:"ca6979e9", title:"What does the world look like with colour blindness and for tetrachromats?",
-   hook:"Why do most people with four colour receptors not see more colours? The answer comes from linguistics.",
-   tags:["Biology","Language","Psychology","Visual arts"]}
+  {img:"honeybee-maths", theme:"Honeybee maths", title:"Are honeybees such great mathematicians?",
+   hook:"Why are honeycomb cells hexagonal? Soap bubbles and soft clay show that physics, not calculation, does the work.",
+   tags:["Mathematics","Physics","Biology","Engineering"]},
+  {img:"climate-fake-news", theme:"Climate fake news", title:"Fact or fiction: how to debunk climate fake news?",
+   hook:"Students use AI to craft a fake news story about renewables, then turn into fact-checkers and debunk it with real data.",
+   tags:["Physics","Language","Geography","Civic education"]},
+  {img:"oil-spill", theme:"Oil spill clean-up", title:"How to clean up an oil spill?",
+   hook:"Sponges, cloth, soap or strainers? Students test clean-up methods and model how fast the slick reaches the coast.",
+   tags:["Physics","Chemistry","Biology","Mathematics"]},
+  {img:"daily-food-decisions", theme:"Daily food decisions", title:"What are your daily food decisions?",
+   hook:"Students track what they eat and who decides, then compare their meals with people around the world using real data.",
+   tags:["Home economics","Biology","Mathematics","Geography"]},
+  {img:"ai-better-decisions", theme:"AI & better decisions", title:"Can AI help us make better decisions?",
+   hook:"Plants in the school greenhouse are wilting. Students build a Yes/No decision tree, then use generative AI to critique it.",
+   tags:["Biology","Mathematics","Engineering","Technology"]},
+  {img:"digital-anatomy", theme:"Digital Anatomy", title:"Digital Anatomy",
+   hook:"What is inside the devices we throw away? Students take apart discarded electronics, map their components and test what still works.",
+   tags:["Technology","Physics","Chemistry","Citizenship"]},
+  {img:"fix-or-reinvent", theme:"Fix or reinvent", title:"Fix or reinvent: repair, redesign and create",
+   hook:"Can a broken device get a second life? Students design replacement parts in Tinkercad and build new prototypes from salvaged components.",
+   tags:["Technology","Physics","Mathematics","Arts","Citizenship"]}
 ];
 
 const $ = id => document.getElementById(id);
@@ -157,7 +154,7 @@ CHALLENGES.forEach((c, k) => {
   const b = document.createElement("button");
   b.className = "thumb"; b.setAttribute("role","tab");
   b.setAttribute("aria-label", (k+1) + ". " + c.title);
-  b.innerHTML = '<img src="' + src(c) + '" alt="" loading="lazy">';
+  b.innerHTML = '<span class="tframe"><img src="' + src(c) + '" alt="" loading="lazy"></span><span class="tlabel">' + c.theme + '</span>';
   b.onclick = () => show(k);
   $("thumbs").appendChild(b);
 });
@@ -170,6 +167,7 @@ function show(k){
   setTimeout(() => { img.src = src(c); img.alt = "Poster: " + c.title; img.classList.remove("fade"); }, 150);
   $("num").textContent = String(i+1).padStart(2,"0");
   $("title").textContent = c.title;
+  $("theme").textContent = c.theme;
   $("hook").textContent = c.hook;
   $("chips").innerHTML = c.tags.map(t => "<li>" + t + "</li>").join("");
   [...$("thumbs").children].forEach((t, n) => {
