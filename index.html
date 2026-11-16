@@ -66,6 +66,11 @@
   .big-view{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff}
   .big-view canvas,.big-view img{max-width:100%;max-height:100%;width:auto;height:auto;border-radius:6px;background:#fff;display:block}
   .big-view .missing{width:auto;height:auto;border-radius:6px;padding:20px}
+  .sheet{position:relative;width:100%;height:100%}
+  .big-view .sheet{flex:0 0 auto}
+  .big-view .sheet canvas{max-width:none;max-height:none;width:100%;height:100%;border-radius:6px}
+  .plink{position:absolute;display:block;border-radius:4px;cursor:pointer}
+  .plink:hover,.plink:focus-visible{outline:3px solid var(--lime);background:rgba(195,212,106,.25)}
   .lightbox button{position:absolute;top:14px;right:14px;background:#fff;color:var(--ink);width:40px;height:40px;border-radius:50%;border:0;font-size:20px;cursor:pointer}
 
   @media (max-width:760px){
@@ -183,7 +188,20 @@ function load(c){
         try {
           const doc = await PDFJS.getDocument(pdfSrc(c)).promise;
           const page = await doc.getPage(1);
-          return {type:"pdf", page, url:pdfSrc(c)};
+          const base = page.getViewport({scale:1});
+          /* clickable links drawn in the PDF (e.g. over the QR codes) */
+          let links = [];
+          try {
+            links = (await page.getAnnotations())
+              .filter(a => a.subtype === "Link" && (a.url || a.unsafeUrl))
+              .map(a => {
+                const [x1,y1,x2,y2] = base.convertToViewportRectangle(a.rect);
+                return {url:a.url || a.unsafeUrl,
+                        left:Math.min(x1,x2)/base.width*100, top:Math.min(y1,y2)/base.height*100,
+                        width:Math.abs(x2-x1)/base.width*100, height:Math.abs(y2-y1)/base.height*100};
+              });
+          } catch (e) {}
+          return {type:"pdf", page, base, links, url:pdfSrc(c)};
         } catch (e) { /* no PDF yet: fall through */ }
       }
       return {type:"img", url:jpgSrc(c)};
@@ -193,24 +211,42 @@ function load(c){
 }
 
 /* Draw a poster into an element at a given CSS width */
-async function paint(c, el, cssW, stillWanted){
+/* opts.links: add the PDF's clickable links; opts.fixed: give the sheet an exact pixel size; opts.sharp: extra resolution */
+async function paint(c, el, cssW, stillWanted, opts = {}){
   const s = await load(c);
   if (stillWanted && !stillWanted()) return null;
   let node;
   if (s.type === "pdf") {
-    const base = s.page.getViewport({scale:1});
-    const vp = s.page.getViewport({scale:(cssW * DPR) / base.width});
-    node = document.createElement("canvas");
-    node.width = Math.round(vp.width); node.height = Math.round(vp.height);
-    node.setAttribute("role","img");
-    node.setAttribute("aria-label","Poster: " + c.title);
-    await s.page.render({canvasContext:node.getContext("2d"), viewport:vp}).promise;
+    const base = s.base;
+    const vp = s.page.getViewport({scale:(cssW * DPR * (opts.sharp || 1)) / base.width});
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    cv.setAttribute("role","img");
+    cv.setAttribute("aria-label","Poster: " + c.title);
+    await s.page.render({canvasContext:cv.getContext("2d"), viewport:vp}).promise;
+    node = document.createElement("div");
+    node.className = "sheet";
+    if (opts.fixed) { node.style.width = cssW + "px"; node.style.height = (cssW * base.height / base.width) + "px"; }
+    node.appendChild(cv);
+    if (opts.links) s.links.forEach(l => {
+      const a = document.createElement("a");
+      a.className = "plink"; a.href = l.url; a.target = "_blank"; a.rel = "noopener";
+      a.title = l.url; a.setAttribute("aria-label", "Open link: " + l.url);
+      Object.assign(a.style, {left:l.left+"%", top:l.top+"%", width:l.width+"%", height:l.height+"%"});
+      a.addEventListener("click", e => e.stopPropagation());
+      node.appendChild(a);
+    });
   } else {
-    node = await new Promise(res => {
+    const tryImg = url => new Promise(res => {
       const im = new Image();
       im.onload = () => res(im); im.onerror = () => res(null);
-      im.alt = "Poster: " + c.title; im.src = s.url;
+      im.alt = "Poster: " + c.title; im.src = url;
     });
+    node = await tryImg(s.url);
+    if (!node) {                      /* one retry, in case of a temporary glitch */
+      await new Promise(r => setTimeout(r, 600));
+      node = await tryImg(s.url + "?r=" + Date.now());
+    }
     if (!node) {
       node = document.createElement("div");
       node.className = "missing"; node.textContent = "Poster coming soon";
@@ -247,10 +283,13 @@ function show(k){
   const c = CHALLENGES[i], view = $("posterView"), t = ++token;
   view.classList.add("fade");
   $("dl").hidden = true;
-  paint(c, view, $("posterBox").clientWidth || 430, () => t === token).then(s => {
+  paint(c, view, $("posterBox").clientWidth || 430, () => t === token, {links:true}).then(s => {
     if (t !== token || !s) return;
     view.classList.remove("fade");
     if (s.type === "pdf") { $("dl").href = s.url; $("dl").hidden = false; }
+    /* if this poster's thumbnail failed earlier but the big one worked, redraw the thumbnail */
+    const f = frames[i];
+    if (!view.querySelector(".missing") && (f.querySelector(".missing") || !f.firstChild)) paint(c, f, 70).catch(() => {});
   }).catch(() => view.classList.remove("fade"));
 
   $("num").textContent = String(i+1).padStart(2,"0");
@@ -267,12 +306,15 @@ function show(k){
 
 /* Full-size view */
 let bigToken = 0;
-function openBig(){
+async function openBig(){
   const c = CHALLENGES[i], box = $("bigView"), t = ++bigToken;
   box.textContent = "Loading…";
   $("lightbox").classList.add("open"); $("lightbox").setAttribute("aria-hidden","false");
-  const w = Math.min(window.innerWidth - 32, (window.innerHeight - 32) * 1587 / 2245);
-  paint(c, box, Math.max(w, 300) * 1.5, () => t === bigToken && $("lightbox").classList.contains("open"));
+  const s = await load(c);
+  const ratio = s.type === "pdf" ? s.base.width / s.base.height : 1587 / 2245;
+  const w = Math.floor(Math.min(window.innerWidth - 32, (window.innerHeight - 32) * ratio));
+  paint(c, box, Math.max(w, 200), () => t === bigToken && $("lightbox").classList.contains("open"),
+        {links:true, fixed:true, sharp:1.5});
 }
 function closeBig(){ bigToken++; $("lightbox").classList.remove("open"); $("lightbox").setAttribute("aria-hidden","true"); }
 
