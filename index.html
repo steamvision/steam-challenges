@@ -129,6 +129,8 @@
 
 <!-- PDF.js: draws the first page of each PDF poster -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- jsQR: reads the QR codes on each poster so they can be clicked -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 /*
   POSTERS
@@ -189,25 +191,94 @@ function load(c){
           const doc = await PDFJS.getDocument(pdfSrc(c)).promise;
           const page = await doc.getPage(1);
           const base = page.getViewport({scale:1});
-          /* clickable links drawn in the PDF (e.g. over the QR codes) */
-          let links = [];
-          try {
-            links = (await page.getAnnotations())
-              .filter(a => a.subtype === "Link" && (a.url || a.unsafeUrl))
-              .map(a => {
-                const [x1,y1,x2,y2] = base.convertToViewportRectangle(a.rect);
-                return {url:a.url || a.unsafeUrl,
-                        left:Math.min(x1,x2)/base.width*100, top:Math.min(y1,y2)/base.height*100,
-                        width:Math.abs(x2-x1)/base.width*100, height:Math.abs(y2-y1)/base.height*100};
-              });
-          } catch (e) {}
-          return {type:"pdf", page, base, links, url:pdfSrc(c)};
+          let linksP = null;
+          const getLinks = () => linksP || (linksP = buildLinks(page, base));
+          return {type:"pdf", page, base, getLinks, url:pdfSrc(c)};
         } catch (e) { /* no PDF yet: fall through */ }
       }
       return {type:"img", url:jpgSrc(c)};
     })());
   }
   return cache.get(c.img);
+}
+
+/*
+  CLICKABLE AREAS ON THE POSTER
+  1. Every QR code on the poster is read here, in the browser, and becomes a link
+     to the address the QR code itself contains (the PDF file is not changed).
+  2. Links stored in the PDF are kept, EXCEPT those sitting on top of a QR code
+     (so a wrong link placed over a QR code in the PDF is ignored).
+*/
+const overlaps = (a, b) => a.left < b.left + b.width && b.left < a.left + a.width &&
+                           a.top < b.top + b.height && b.top < a.top + a.height;
+
+async function findQRs(page){
+  if (!window.jsQR) return [];
+  const vp = page.getViewport({scale:2});
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  const ctx = cv.getContext("2d", {willReadFrequently:true});
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  await page.render({canvasContext:ctx, viewport:vp}).promise;
+  const W = cv.width, H = cv.height;
+  /* turn the poster black-and-white, so coloured/stylised QR codes can be read */
+  const d = ctx.getImageData(0, 0, W, H).data;
+  for (let k = 0; k < d.length; k += 4) {
+    const v = Math.min(d[k], d[k+1], d[k+2]) < 200 ? 0 : 255;
+    d[k] = d[k+1] = d[k+2] = v; d[k+3] = 255;
+  }
+  /* scan the poster in overlapping squares (the reader finds one QR code at a time) */
+  const T = Math.round(W / 4), step = Math.round(T / 2), found = new Map();
+  let n = 0;
+  for (let y = 0; y < H; y += step) for (let x = 0; x < W; x += step) {
+    const w = Math.min(T, W - x), h = Math.min(T, H - y);
+    if (w < T/2 || h < T/2) continue;
+    const tile = new Uint8ClampedArray(w * h * 4);
+    for (let r = 0; r < h; r++) tile.set(d.subarray(((y + r) * W + x) * 4, ((y + r) * W + x + w) * 4), r * w * 4);
+    const q = jsQR(tile, w, h, {inversionAttempts:"dontInvert"});
+    const url = q && (q.data || "").trim();
+    if (url && /^https?:\/\//i.test(url) && !found.has(url)) {
+      const L = q.location;
+      const xs = [L.topLeftCorner.x, L.topRightCorner.x, L.bottomLeftCorner.x, L.bottomRightCorner.x].map(v => v + x);
+      const ys = [L.topLeftCorner.y, L.topRightCorner.y, L.bottomLeftCorner.y, L.bottomRightCorner.y].map(v => v + y);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const pad = (x1 - x0) * 0.08;
+      found.set(url, {url,
+        left:(x0 - pad)/W*100, top:(y0 - pad)/H*100,
+        width:(x1 - x0 + 2*pad)/W*100, height:(y1 - y0 + 2*pad)/H*100});
+    }
+    if (++n % 6 === 0) await new Promise(res => setTimeout(res, 0));  /* keep the page responsive */
+  }
+  return [...found.values()];
+}
+
+async function buildLinks(page, base){
+  let pdfLinks = [];
+  try {
+    pdfLinks = (await page.getAnnotations())
+      .filter(a => a.subtype === "Link" && (a.url || a.unsafeUrl))
+      .map(a => {
+        const [x1,y1,x2,y2] = base.convertToViewportRectangle(a.rect);
+        return {url:a.url || a.unsafeUrl,
+                left:Math.min(x1,x2)/base.width*100, top:Math.min(y1,y2)/base.height*100,
+                width:Math.abs(x2-x1)/base.width*100, height:Math.abs(y2-y1)/base.height*100};
+      });
+  } catch (e) {}
+  let qrs = [];
+  try { qrs = await findQRs(page); } catch (e) {}
+  return [...pdfLinks.filter(l => !qrs.some(q => overlaps(l, q))), ...qrs];
+}
+
+function addLinks(sheet, links){
+  links.forEach(l => {
+    const a = document.createElement("a");
+    a.className = "plink"; a.href = l.url; a.target = "_blank"; a.rel = "noopener";
+    a.title = l.url; a.setAttribute("aria-label", "Open link: " + l.url);
+    Object.assign(a.style, {left:l.left+"%", top:l.top+"%", width:l.width+"%", height:l.height+"%"});
+    a.addEventListener("click", e => e.stopPropagation());
+    a.addEventListener("touchend", e => e.stopPropagation());
+    sheet.appendChild(a);
+  });
 }
 
 /* Draw a poster into an element at a given CSS width */
@@ -228,14 +299,7 @@ async function paint(c, el, cssW, stillWanted, opts = {}){
     node.className = "sheet";
     if (opts.fixed) { node.style.width = cssW + "px"; node.style.height = (cssW * base.height / base.width) + "px"; }
     node.appendChild(cv);
-    if (opts.links) s.links.forEach(l => {
-      const a = document.createElement("a");
-      a.className = "plink"; a.href = l.url; a.target = "_blank"; a.rel = "noopener";
-      a.title = l.url; a.setAttribute("aria-label", "Open link: " + l.url);
-      Object.assign(a.style, {left:l.left+"%", top:l.top+"%", width:l.width+"%", height:l.height+"%"});
-      a.addEventListener("click", e => e.stopPropagation());
-      node.appendChild(a);
-    });
+    if (opts.links) { const sheet = node; s.getLinks().then(ls => addLinks(sheet, ls)).catch(() => {}); }
   } else {
     const tryImg = url => new Promise(res => {
       const im = new Image();
