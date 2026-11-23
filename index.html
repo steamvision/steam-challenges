@@ -98,7 +98,7 @@
       <span class="zoom-hint">Click to enlarge</span>
     </div>
     <div class="info" aria-live="polite">
-      <div class="count"><b id="num">01</b> / <span id="total">10</span> · <span id="theme"></span></div>
+      <div class="count"><b id="num">01</b> / <span id="total">19</span> · <span id="theme"></span></div>
       <h2 id="title"></h2>
       <p class="hook" id="hook"></p>
       <ul class="chips" id="chips"></ul>
@@ -142,34 +142,61 @@
 const CHALLENGES = [
   {img:"digital-colour", theme:"Digital colour", title:"How can we agree on the exact same digital colour?",
    hook:"How do screens mix red, green and blue light, and why do designers describe colours with hexadecimal codes?",
-   tags:["Visual arts","Computer science","Biology","Mathematics"]},
-  {img:"electing-parliament", theme:"Electing parliament", title:"Which is the best way to elect parliament?",
+   tags:["Visual Arts & Design","Computer Science & Informatics","Biology","Physics","Mathematics"]},
+  {img:"colour-blindness", theme:"Colour blindness", title:"What does the world look like with colour blindness and for tetrachromats?",
+   hook:"Why do most people with a fourth colour receptor not see more colours? Answers come from biology and from linguistics.",
+   tags:["Biology","Languages","Psychology","Sociology","Visual Arts & Design"]},
+  {img:"mixing-paint", theme:"Mixing paint", title:"Why is mixing paint so weird sometimes?",
+   hook:"Why do paints and pointillist dots mix so differently? Coloured torches and a colour cube reveal additive and subtractive mixing.",
+   tags:["Visual Arts & Design","Physics","Biology"]},
+  {img:"electing-parliament", theme:"Electing parliament", title:"What is the best way to elect a parliament?",
    hook:"Students compare electoral systems across Europe and build toy election results to test what makes a system fair.",
    tags:["Politics","History","Mathematics"]},
+  {img:"voting-at-school", theme:"Voting at school", title:"What is the best way to vote at school?",
+   hook:"Choosing a class trip becomes a lesson on voting systems, all the way to a Nobel-winning theorem: there is no perfect system.",
+   tags:["Politics","Mathematics","History","Ethics & Moral Studies","Languages"]},
   {img:"measles-vaccination", theme:"Measles vaccination", title:"Should measles vaccinations be mandatory?",
    hook:"An expert discussion where small groups research one perspective, then look for nuanced solutions together.",
-   tags:["Biology","Sociology","Law","Ethics"]},
+   tags:["Biology","Sociology","Politics","Law","Ethics & Moral Studies"]},
+  {img:"implants", theme:"Cochlear & retinal implants", title:"What do cochlear/retinal implants mean to deaf/blind people?",
+   hook:"How well can implants replace hearing or sight? Students research the science, then discuss how the deaf community views them.",
+   tags:["Biology","Technology & Engineering","Law","Politics","Sociology"]},
+  {img:"creating-music", theme:"Creating music", title:"Can you create and analyse music without any prior knowledge?",
+   hook:"A spectrogram tool makes sound visible: students discover the physics of sound and improvise music with it straight away.",
+   tags:["Music","Physics","Technology & Engineering"]},
+  {img:"vowels", theme:"Vowels", title:"What are vowels?",
+   hook:"Students record, slow down and build vowels with digital tools, exploring how the mouth and acoustics shape what we hear.",
+   tags:["Languages","Physics","Music","Technology & Engineering"]},
   {img:"honeybee-maths", theme:"Honeybee maths", title:"Are honeybees such great mathematicians?",
    hook:"Why are honeycomb cells hexagonal? Soap bubbles and soft clay show that physics, not calculation, does the work.",
-   tags:["Mathematics","Physics","Biology","Engineering"]},
+   tags:["Mathematics","Physics","Biology","Technology & Engineering"]},
   {img:"climate-fake-news", theme:"Climate fake news", title:"Fact or fiction: how to debunk climate fake news?",
    hook:"Students use AI to craft a fake news story about renewables, then turn into fact-checkers and debunk it with real data.",
-   tags:["Physics","Language","Geography","Civic education"]},
+   tags:["Physics","Languages","Psychology","Geography","Politics"]},
+  {img:"climate-justice", theme:"Climate justice", title:"How to improve climate justice?",
+   hook:"In a role-play walk, students step forward or back as climate scenarios unfold, then design policies to make adaptation fairer.",
+   tags:["Geography","Sociology","Ethics & Moral Studies","Politics","Law"]},
   {img:"oil-spill", theme:"Oil spill clean-up", title:"How to clean up an oil spill?",
    hook:"Sponges, cloth, soap or strainers? Students test clean-up methods and model how fast the slick reaches the coast.",
-   tags:["Physics","Chemistry","Biology","Mathematics"]},
+   tags:["Mathematics","Physics","Chemistry","Biology","Technology & Engineering"]},
   {img:"daily-food-decisions", theme:"Daily food decisions", title:"What are your daily food decisions?",
    hook:"Students track what they eat and who decides, then compare their meals with people around the world using real data.",
-   tags:["Home economics","Biology","Mathematics","Geography"]},
+   tags:["Home Economics & Food Studies","Biology","Mathematics","Geography"]},
+  {img:"multicultural-meal", theme:"Multicultural meal", title:"What is a (healthy) multicultural meal?",
+   hook:"Students design a healthy, multicultural and sustainable meal for their school, calculating ingredients, costs and footprint.",
+   tags:["Home Economics & Food Studies","Biology","Mathematics","Geography","Sociology"]},
   {img:"ai-better-decisions", theme:"AI & better decisions", title:"Can AI help us make better decisions?",
    hook:"Plants in the school greenhouse are wilting. Students build a Yes/No decision tree, then use generative AI to critique it.",
-   tags:["Biology","Mathematics","Engineering","Technology"]},
+   tags:["Biology","Mathematics","Technology & Engineering","Visual Arts & Design"]},
+  {img:"collect-phones", theme:"Collecting old phones", title:"How to collect old phones?",
+   hook:"How many unused phones are lying in drawers? Students grasp the scale of the problem and plan a collection campaign.",
+   tags:["Mathematics","Geography","Economics","Languages","Application beyond the Classroom"]},
   {img:"digital-anatomy", theme:"Digital Anatomy", title:"Digital Anatomy",
    hook:"What is inside the devices we throw away? Students take apart discarded electronics, map their components and test what still works.",
-   tags:["Technology","Physics","Chemistry","Citizenship"]},
+   tags:["Technology & Engineering","Physics","Chemistry","Mathematics"]},
   {img:"fix-or-reinvent", theme:"Fix or reinvent", title:"Fix or reinvent: repair, redesign and create",
    hook:"Can a broken device get a second life? Students design replacement parts in Tinkercad and build new prototypes from salvaged components.",
-   tags:["Technology","Physics","Mathematics","Arts","Citizenship"]}
+   tags:["Technology & Engineering","Computer Science & Informatics","Mathematics","Economics"]}
 ];
 
 const PDFJS = window.pdfjsLib;
