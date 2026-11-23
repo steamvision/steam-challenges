@@ -134,8 +134,8 @@
 <script>
 /*
   POSTERS
-  Each poster lives in the "posters" folder and is named after the "img" value below:
-    posters/<img>.pdf   (e.g. posters/oil-spill.pdf)
+  Each poster is a PDF named after the "img" value below (e.g. oil-spill.pdf),
+  either in the "posters" folder or in the same folder as this index.html.
   If the PDF is not there yet, the page falls back to posters/<img>.jpg,
   and if neither exists it shows "Poster coming soon".
 */
@@ -215,12 +215,17 @@ function load(c){
     cache.set(c.img, (async () => {
       if (PDFJS) {
         try {
-          const doc = await PDFJS.getDocument(pdfSrc(c)).promise;
+          /* look in the "posters" folder first, then next to index.html */
+          let doc = null, url = null;
+          for (const u of [pdfSrc(c), c.img + ".pdf"]) {
+            try { doc = await PDFJS.getDocument(u).promise; url = u; break; } catch (e) {}
+          }
+          if (!doc) throw new Error("no pdf");
           const page = await doc.getPage(1);
           const base = page.getViewport({scale:1});
           let linksP = null;
           const getLinks = () => linksP || (linksP = buildLinks(page, base));
-          return {type:"pdf", page, base, getLinks, url:pdfSrc(c)};
+          return {type:"pdf", page, base, getLinks, url};
         } catch (e) { /* no PDF yet: fall through */ }
       }
       return {type:"img", url:jpgSrc(c)};
